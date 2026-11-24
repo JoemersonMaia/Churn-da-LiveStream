@@ -64,3 +64,69 @@ features_importances = (pd.Series(arvore.feature_importances_,
 
 features_importances["acum"] = features_importances[0].cumsum()
 features_importances[features_importances["acum"] < 0.96]
+
+# %%
+
+best_freatures = features_importances[features_importances["acum"] < 0.96]["index"].tolist()
+
+best_freatures
+# %%
+
+## MODIFY ##
+
+from feature_engine import discretisation
+
+tree_discretisation = discretisation.DecisionTreeDiscretiser(variables=best_freatures,
+                                                             regression=False,
+                                                             bin_output= 'bin_number',
+                                                             cv=3)
+
+tree_discretisation.fit(X_train, y_train)
+
+# %%
+
+X_train_transforme = tree_discretisation.transform(X_train)
+X_train_transforme
+
+# %%
+
+## MODEL ##
+from sklearn import linear_model
+
+reg = linear_model.LogisticRegression(penalty=None, random_state=42, max_iter=1000000)
+reg.fit(X_train_transforme, y_train)
+
+# %%
+
+from sklearn import metrics
+
+y_train_predict = reg.predict(X_train_transforme)
+y_train_proba = reg.predict_proba(X_train_transforme)[:,1]
+acc_train = metrics.accuracy_score(y_train, y_train_predict)
+auc_train = metrics.roc_auc_score(y_train, y_train_proba)
+
+print(acc_train)
+print(auc_train)
+# %%
+
+X_test_transform = tree_discretisation.transform(X_test)
+
+y_test_predict = reg.predict(X_test_transform)
+y_test_proba = reg.predict_proba(X_test_transform)[:,1]
+acc_test = metrics.accuracy_score(y_test, y_test_predict)
+auc_test = metrics.roc_auc_score(y_test, y_test_proba)
+
+print(acc_test)
+print(auc_test)
+
+# %%
+
+oot_transform = tree_discretisation.transform(oot[features])
+
+y_oot_predict = reg.predict(X_oot_transform)
+y_oot_proba = reg.predict_proba(X_oot_transform)[:,1]
+acc_oot = metrics.accuracy_score(y_oot, y_oot_predict)
+auc_oot = metrics.roc_auc_score(y_oot, y_oot_proba)
+
+print(acc_oot)
+print(auc_oot)
